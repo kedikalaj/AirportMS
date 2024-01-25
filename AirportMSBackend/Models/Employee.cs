@@ -18,4 +18,15 @@
         public string EMPLOYEE_LNAME { get; set; }
         public int ROLE_ID { get; set; }
     }
+    public class AverageWage
+    {
+        public string RoleName { get; set; }
+        public int? AverageRoleBonus { get; set; }
+    }
+    public class BonusByRole
+    {
+        public string RoleName { get; set; }
+        public int BonusOver50 { get; set; }
+        public int BonusUnder50 { get; set; }
+    }
 }

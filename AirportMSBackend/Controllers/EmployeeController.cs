@@ -124,5 +124,67 @@ namespace AirportMS.Controllers
                 }
             }
         }
+        /// <summary>
+        /// Gets the average bonus per role
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("Employee/AverageBonus")]
+        public ActionResult<IEnumerable<AverageWage>> AverageBonus()
+        {
+            var items = new List<AverageWage>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                string script = "\r\nSELECT r.ROLE_ID, r.ROLE_DESCRIPTION, AVG(e1.EMPLOYEE_SALARY_BONUS) AS AVG_BONUS\r\nFROM EMPLOYEE e1\r\nINNER JOIN EMPLOYEE e2 ON e1.ROLE_ID = e2.ROLE_ID AND e1.EMPLOYEE_ID <> e2.EMPLOYEE_ID\r\nINNER JOIN ROLE r ON e1.ROLE_ID = r.ROLE_ID\r\nGROUP BY r.ROLE_ID, r.ROLE_DESCRIPTION;\r\n";
+                using (var command = new SqlCommand(script, connection))
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var item = new AverageWage
+                        {
+                            RoleName = reader["ROLE_DESCRIPTION"].ToString(),
+                            AverageRoleBonus = (int?)reader["AVG_BONUS"],
+                        };
+
+                        items.Add(item);
+                    }
+                }
+            }
+            return items;
+        }
+
+        /// <summary>
+        /// Gets the numbers of employees with bonuses more than 50 and less than 5, based on role
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("Employee/EmployeesWithBonus")]
+        public ActionResult<IEnumerable<BonusByRole>> EmployeesWithBonus()
+        {
+            var items = new List<BonusByRole>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                string script = "use AirportManage;\r\nSELECT ROLE_DESCRIPTION,\r\n       COUNT(CASE WHEN EMPLOYEE_SALARY_BONUS < 50 THEN EMPLOYEE_ID END) AS MoreThan50,\r\n       COUNT(CASE WHEN EMPLOYEE_SALARY_BONUS > 50 THEN EMPLOYEE_ID END) AS LessThan50\r\nFROM EMPLOYEE\r\nINNER JOIN ROLE ON EMPLOYEE.ROLE_ID = ROLE.ROLE_ID\r\nGROUP BY ROLE_DESCRIPTION;\r\n";
+                using (var command = new SqlCommand(script, connection))
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var item = new BonusByRole
+                        {
+                            RoleName = reader["ROLE_DESCRIPTION"].ToString(),
+                            BonusOver50 = (int)reader["MoreThan50"],
+                            BonusUnder50 = (int)reader["LessThan50"],
+                        };
+
+                        items.Add(item);
+                    }
+                }
+            }
+            return items;
+        }
     }
 }
