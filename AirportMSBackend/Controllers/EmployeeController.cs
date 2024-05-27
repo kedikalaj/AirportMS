@@ -9,12 +9,14 @@ namespace AirportMS.Controllers
         private readonly string _connectionString;
         private readonly IHub _sentryHub;
 
+        public string ConnectionString => _connectionString;
+        public IHub SentryHub => _sentryHub;
+
         public EmployeeController(IConfiguration configuration, IHub sentryHub)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
             _sentryHub = sentryHub;
         }
-
         [HttpGet("Airport/GetEmployees")]
         public ActionResult<IEnumerable<Employee>> GetEmployee()
         {
