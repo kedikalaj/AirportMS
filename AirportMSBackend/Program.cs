@@ -30,7 +30,7 @@ builder.Logging.AddSentry(o =>
         // During startup, wait up to 500ms to profile the app startup code.
         // This could make launching the app a bit slower so comment it out if you
         // prefer profiling to start asynchronously.
-        TimeSpan.FromMilliseconds(500)
+        TimeSpan.FromMilliseconds(500)));
 });
 var app = builder.Build();
 

@@ -1,5 +1,6 @@
 ﻿using AirportMS.Models;
 using Microsoft.AspNetCore.Mvc;
+using Sentry;
 using System.Data.SqlClient;
 
 namespace AirportMS.Controllers
@@ -8,10 +9,14 @@ namespace AirportMS.Controllers
     {
         private readonly string _connectionString;
         private readonly ISentryClient _sentryClient;
-        public EmployeeController(IConfiguration configuration, ISentryClient sentryClient)
+        private readonly ILogger<EmployeeController> _logger;
+
+
+        public EmployeeController(IConfiguration configuration, ISentryClient sentryClient, ILogger<EmployeeController> logger)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
             _sentryClient = sentryClient;
+            _logger = logger;
         }
 
         [HttpGet("Airport/GetEmployees")]
@@ -42,7 +47,7 @@ namespace AirportMS.Controllers
                                 ROLE_DESCRIPTION = reader["ROLE_DESCRIPTION"].ToString(),
                                 ROLE_ID = (int)reader["ROLE_ID"],
                             };
-
+                            _logger.LogInformation("GetEmployee method called successfully");
                             items.Add(item);
                         }
                     }
@@ -53,6 +58,7 @@ namespace AirportMS.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred in GetEmployee method");
                 _sentryClient.CaptureException(ex);
                 throw;
             }
