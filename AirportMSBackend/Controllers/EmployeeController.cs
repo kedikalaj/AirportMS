@@ -7,20 +7,16 @@ namespace AirportMS.Controllers
     public class EmployeeController : ApiControllerAttribute
     {
         private readonly string _connectionString;
-        private readonly IHub _sentryHub;
-
-        public string ConnectionString => _connectionString;
-        public IHub SentryHub => _sentryHub;
-
-        public EmployeeController(IConfiguration configuration, IHub sentryHub)
+        private readonly ISentryClient _sentryClient;
+        public EmployeeController(IConfiguration configuration, ISentryClient sentryClient)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
-            _sentryHub = sentryHub;
+            _sentryClient = sentryClient;
         }
+
         [HttpGet("Airport/GetEmployees")]
         public ActionResult<IEnumerable<Employee>> GetEmployee()
         {
-            var childSpan = _sentryHub.GetSpan()?.StartChild("additional-work");
 
             var items = new List<Employee>();
 
@@ -51,13 +47,13 @@ namespace AirportMS.Controllers
                         }
                     }
                 }
-                childSpan?.Finish(SpanStatus.Ok);
+
                 return items;
 
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                childSpan?.Finish(e);
+                _sentryClient.CaptureException(ex);
                 throw;
             }
         }
