@@ -7,41 +7,57 @@ namespace AirportMS.Controllers
     public class EmployeeController : ApiControllerAttribute
     {
         private readonly string _connectionString;
-        public EmployeeController(IConfiguration configuration)
+        private readonly IHub _sentryHub;
+
+        public EmployeeController(IConfiguration configuration, IHub sentryHub)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _sentryHub = sentryHub;
         }
 
         [HttpGet("Airport/GetEmployees")]
         public ActionResult<IEnumerable<Employee>> GetEmployee()
         {
+            var childSpan = _sentryHub.GetSpan()?.StartChild("additional-work");
+
             var items = new List<Employee>();
 
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                string script = "SELECT  EMPLOYEE.EMPLOYEE_ID,   EMPLOYEE.EMPLOYEE_FNAME,   EMPLOYEE.EMPLOYEE_LNAME,  EMPLOYEE.EMPLOYEE_SALARY_BONUS,    ROLE.ROLE_ID,  ROLE.ROLE_DESCRIPTION,    ROLE.ROLE_BASE_SALARY FROM  EMPLOYEE JOIN     ROLE ON EMPLOYEE.ROLE_ID = ROLE.ROLE_ID JOIN   EMPLOYEE_AIRPORT ON EMPLOYEE.EMPLOYEE_ID = EMPLOYEE_AIRPORT.EMPLOYEE_ID where EMPLOYEE_AIRPORT.AIRPORT_ID = 3;";
-                using (var command = new SqlCommand(script, connection))
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var item = new Employee
-                        {
-                            EMPLOYEE_ID = (int)reader["EMPLOYEE_ID"],
-                            EMPLOYEE_SALARY_BONUS = (int)reader["EMPLOYEE_SALARY_BONUS"],
-                            EMPLOYEE_LNAME = reader["EMPLOYEE_LNAME"].ToString(),
-                            EMPLOYEE_FNAME = reader["EMPLOYEE_FNAME"].ToString(),
-                            ROLE_BASE_SALARY = (int)reader["ROLE_BASE_SALARY"],
-                            ROLE_DESCRIPTION = reader["ROLE_DESCRIPTION"].ToString(),
-                            ROLE_ID = (int)reader["ROLE_ID"],
-                        };
 
-                        items.Add(item);
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    string script = "SELECT  EMPLOYEE.EMPLOYEE_ID,   EMPLOYEE.EMPLOYEE_FNAME,   EMPLOYEE.EMPLOYEE_LNAME,  EMPLOYEE.EMPLOYEE_SALARY_BONUS,    ROLE.ROLE_ID,  ROLE.ROLE_DESCRIPTION,    ROLE.ROLE_BASE_SALARY FROM  EMPLOYEE JOIN     ROLE ON EMPLOYEE.ROLE_ID = ROLE.ROLE_ID JOIN   EMPLOYEE_AIRPORT ON EMPLOYEE.EMPLOYEE_ID = EMPLOYEE_AIRPORT.EMPLOYEE_ID where EMPLOYEE_AIRPORT.AIRPORT_ID = 3;";
+                    using (var command = new SqlCommand(script, connection))
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var item = new Employee
+                            {
+                                EMPLOYEE_ID = (int)reader["EMPLOYEE_ID"],
+                                EMPLOYEE_SALARY_BONUS = (int)reader["EMPLOYEE_SALARY_BONUS"],
+                                EMPLOYEE_LNAME = reader["EMPLOYEE_LNAME"].ToString(),
+                                EMPLOYEE_FNAME = reader["EMPLOYEE_FNAME"].ToString(),
+                                ROLE_BASE_SALARY = (int)reader["ROLE_BASE_SALARY"],
+                                ROLE_DESCRIPTION = reader["ROLE_DESCRIPTION"].ToString(),
+                                ROLE_ID = (int)reader["ROLE_ID"],
+                            };
+
+                            items.Add(item);
+                        }
                     }
                 }
+                childSpan?.Finish(SpanStatus.Ok);
+                return items;
+
             }
-            return items;
+            catch (Exception e)
+            {
+                childSpan?.Finish(e);
+                throw;
+            }
         }
 
         [HttpPut("Airport/ModifyEmployee/{id}")]
